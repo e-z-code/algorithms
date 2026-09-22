@@ -1,66 +1,53 @@
 import sys
+from collections import deque
 
 
-# 1. TO GET THE INPUT
+# 1. TO GET THE INPUT AND CONSTRUCT THE GRAPH
 
 band_cnt, people_cnt, min_people = map(int, sys.stdin.readline().split())
 
-crowd_cnt = [0 for band in range(band_cnt)]
-crowds = [[] for band in range(band_cnt)]
-
-see_cnt = []
-to_see = []
-
+node_cnt = band_cnt + people_cnt
+graph = [[] for node in range(node_cnt)]
 for person in range(people_cnt):
     favorite_cnt = int(sys.stdin.readline())
-    see_cnt.append(favorite_cnt)
     favorites = list(map(int, sys.stdin.readline().split()))
-    to_see.append(favorites)
-    for idx in range(favorite_cnt):
-        favorites[idx] -= 1
-    for favorite in favorites:
-        crowd_cnt[favorite] += 1
-        crowds[favorite].append(person)
+    for band in favorites:
+        graph[band-1].append(band_cnt + person)
+        graph[band_cnt + person].append(band-1)
 
 
 # 2. TO SOLVE THE PROBLEM
 
-join_band = set([band for band in range(band_cnt)])
-join_people = set([person for person in range(people_cnt)])
+join = [1 for node in range(node_cnt)]
+degree = [len(graph[node]) for node in range(node_cnt)]
 
-while True:
+queue = deque()
+for band in range(band_cnt):
+    if degree[band] < min_people:
+        queue.append(band)
+        join[band] = 0
 
-    changed = False
+while queue:
+    now_node = queue.popleft()
+    for next_node in graph[now_node]:
+        degree[next_node] -= 1
+        if join[next_node]:
+            if next_node < band_cnt and degree[next_node] < min_people:
+                queue.append(next_node)
+                join[next_node] = 0
+            else:
+                if next_node >= band_cnt and degree[next_node] * 2 < len(graph[next_node]):
+                    queue.append(next_node)
+                    join[next_node] = 0
 
-    cancel = []
-    for band in join_band:
-        if crowd_cnt[band] < min_people:
-            cancel.append(band)
-            changed = True
-    for band in cancel:
-        join_band.remove(band)
-        for person in crowds[band]:
-            see_cnt[person] -= 1
+ans = []
+for band in range(band_cnt):
+    if join[band]:
+        ans.append(band + 1)
 
-    cancel = []
-    for person in join_people:
-        if see_cnt[person] * 2 < len(to_see[person]):
-            cancel.append(person)
-            changed = True
-    for person in cancel:
-        join_people.remove(person)
-        for band in to_see[person]:
-            crowd_cnt[band] -= 1
-
-    if not changed:
-        break
-
-if len(join_band) == 0:
+if len(ans) == 0:
     print("impossible")
 else:
     print("possible")
-    ans = list(join_band)
     print(len(ans))
-    for idx in range(len(ans)):
-        ans[idx] += 1
     print(" ".join(map(str, ans)))
